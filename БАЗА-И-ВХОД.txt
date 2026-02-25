@@ -1,0 +1,88 @@
+═══════════════════════════════════════════════════════════════
+  Ошибка "User not found" / "Failed to create user (HTTP 404)"
+═══════════════════════════════════════════════════════════════
+
+Если уже видите "Failed to create user (HTTP 404)" при входе:
+  1) Миграции должны быть применены (шаг 3).
+  2) Выполните шаг 3.1 (init-anon-role.sql) — он перезагружает схему PostgREST.
+  3) Если 404 остаётся: docker compose -f docker-compose.dev.yaml restart postgrest
+
+Ниже — полная настройка с нуля.
+
+Вход по секрету не работает, пока не запущены:
+  1) PostgreSQL (база данных)
+  2) PostgREST (сервис на порту 3000)
+  3) Миграции (таблицы в базе)
+
+───────────────────────────────────────────────────────────────
+ШАГ 1. Установите Docker (если ещё нет)
+───────────────────────────────────────────────────────────────
+  https://docs.docker.com/get-docker/
+  Установите Docker Desktop для Windows и перезапустите ПК при необходимости.
+
+───────────────────────────────────────────────────────────────
+ШАГ 2. Запустите базу и PostgREST
+───────────────────────────────────────────────────────────────
+  Откройте терминал (PowerShell или CMD) и выполните:
+
+  cd "d:\VIBE_CODEPROJECT\main)project_avto\WebBuilder\webstudio-main\webstudio-main\apps\builder"
+  docker compose -f docker-compose.dev.yaml up -d
+
+  Дождитесь сообщения, что контейнеры запущены. Проверка:
+  docker compose -f docker-compose.dev.yaml ps
+  — оба сервиса (db, postgrest) должны быть в состоянии "running".
+
+  Если раньше использовали старый образ postgres:15 — лучше пересоздать контейнеры:
+  docker compose -f docker-compose.dev.yaml down
+  docker compose -f docker-compose.dev.yaml up -d
+
+───────────────────────────────────────────────────────────────
+ШАГ 3. Примените миграции (создание таблиц)
+───────────────────────────────────────────────────────────────
+  В корне проекта Webstudio (не в apps/builder):
+
+  cd "d:\VIBE_CODEPROJECT\main)project_avto\WebBuilder\webstudio-main\webstudio-main"
+  pnpm migrations
+
+  Команда подключится к базе из .env (apps/builder/.env) и создаст таблицы.
+  Если будет ошибка подключения — убедитесь, что шаг 2 выполнен и порт 5432 свободен.
+
+───────────────────────────────────────────────────────────────
+ШАГ 3.1. Роль anon и перезагрузка схемы PostgREST (обязательно после миграций)
+───────────────────────────────────────────────────────────────
+  PostgREST кэширует схему при старте. Если миграции запускали после старта
+  контейнеров, без этого шага будет "Failed to create user (HTTP 404)".
+  Выполните (имя контейнера db может быть builder-db-1):
+
+  Get-Content "d:\VIBE_CODEPROJECT\main)project_avto\WebBuilder\webstudio-main\webstudio-main\apps\builder\init-anon-role.sql" | docker exec -i builder-db-1 psql -U postgres -d webstudio
+
+  Скрипт создаёт роль anon, выдаёт права на таблицу User и отправляет
+  PostgREST команду перезагрузить схему. Если контейнер называется иначе —
+  замените builder-db-1 (узнать: docker compose -f docker-compose.dev.yaml ps).
+
+  Если 404 всё равно появляется — перезапустите PostgREST:
+  docker compose -f docker-compose.dev.yaml restart postgrest
+
+───────────────────────────────────────────────────────────────
+ШАГ 4. Перезапустите Webstudio и войдите
+───────────────────────────────────────────────────────────────
+  1) Запустите редактор (ЗАПУСК-WEBSTUDIO.bat или pnpm run dev в apps/builder).
+  2) Откройте в браузере адрес из консоли (например https://vite.wstd.dev:5173/).
+  3) Login with Secret → вставьте секрет из файла .env (AUTH_SECRET=...) → Login.
+
+  После этого пользователь создастся в базе и вы попадёте в дашборд.
+
+───────────────────────────────────────────────────────────────
+Важно: в .env уже указано
+  DATABASE_URL, DIRECT_URL, POSTGREST_URL=http://localhost:3000
+  POSTGREST_API_KEY оставлен пустым — PostgREST использует роль anon (как в Dev Container).
+  Для входа по секрету используется .env.development (DEV_LOGIN=true, AUTH_SECRET=...).
+  Порт 5432 и 3000 не должны быть заняты другими программами.
+
+───────────────────────────────────────────────────────────────
+Альтернатива без Docker
+───────────────────────────────────────────────────────────────
+  По документации Webstudio локальная разработка делается через
+  "Dev Containers" в VS Code/Cursor: открыть папку проекта →
+  "Reopen in Container". Тогда окружение (Postgres + PostgREST) поднимется само.
+  https://docs.webstudio.is/contributing/contributing-for-developers

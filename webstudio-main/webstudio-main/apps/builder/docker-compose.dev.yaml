@@ -1,0 +1,35 @@
+# База и PostgREST как в официальном .devcontainer (Contributing for Developers).
+# Запуск: docker compose -f docker-compose.dev.yaml up -d
+# После первого запуска: выполнить миграции и init-anon-role.sql (см. БАЗА-И-ВХОД.txt).
+
+services:
+  db:
+    image: ghcr.io/supabase/postgres:15.1.1.55
+    restart: unless-stopped
+    command: ["postgres", "-c", "listen_addresses=*"]
+    environment:
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: webstudio
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-anon-role.sql:/docker-entrypoint-initdb.d/02-anon-role.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d webstudio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.0
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgresql://postgres:pass@db:5432/webstudio
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: jwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecretjwtsecret
+    ports:
+      - "3000:3000"
