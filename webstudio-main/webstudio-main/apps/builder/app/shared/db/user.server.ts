@@ -75,7 +75,7 @@ const genericCreateAccount = async (
     const err = newUser.error as { message?: string; details?: string; hint?: string; code?: string };
     const res = newUser as { status?: number; statusText?: string; data?: unknown };
     const errMsg = [err.message, err.details, err.hint].filter(Boolean).join("; ");
-    console.error("PostgREST/insert User failed:", { status: res.status, statusText: res.statusText, code: err.code, message: err.message, details: err.details, hint: err.hint });
+    console.error("PostgREST insert failed:", res.status, err.message ?? err.code);
     throw new Error(errMsg ? `Failed to create user: ${errMsg}` : `Failed to create user (HTTP ${res.status ?? "?"})`);
   }
 

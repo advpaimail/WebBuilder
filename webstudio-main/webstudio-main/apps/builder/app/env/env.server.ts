@@ -36,6 +36,8 @@ if (!authSecret) {
 const env = {
   // Authentication
   DEV_LOGIN: process.env.DEV_LOGIN,
+  /** В dev: пропустить страницу логина и войти по AUTH_SECRET автоматически */
+  DEV_AUTO_LOGIN: process.env.DEV_AUTO_LOGIN === "true",
   GH_CLIENT_ID: process.env.GH_CLIENT_ID,
   GH_CLIENT_SECRET: process.env.GH_CLIENT_SECRET,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

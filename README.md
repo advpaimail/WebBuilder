@@ -1,4 +1,5 @@
 # WebBuilder
+<<<<<<< HEAD
 
 Локальная сборка [Webstudio](https://github.com/webstudio-is/webstudio) с настройкой для разработки на Windows.
 
@@ -20,3 +21,6 @@
 - Node.js 22+
 - pnpm
 - Docker (для PostgreSQL и PostgREST)
+=======
+Public
+>>>>>>> 1b3def92b4c82c1c88982ef023353ce6df8bcdcf

@@ -45,12 +45,7 @@ const strategyCallback = async ({
     return { userId: user.id, createdAt: Date.now() };
   } catch (error) {
     if (error instanceof Error) {
-      console.error({
-        error,
-        extras: {
-          loginMethod: AUTH_PROVIDERS.LOGIN_DEV,
-        },
-      });
+      console.error("OAuth login failed:", error.message);
     }
     throw error;
   }
@@ -111,12 +106,7 @@ if (env.DEV_LOGIN === "true") {
           };
         } catch (error) {
           if (error instanceof Error) {
-            console.error({
-              error,
-              extras: {
-                loginMethod: AUTH_PROVIDERS.LOGIN_DEV,
-              },
-            });
+            console.error("Dev login failed:", error.message);
           }
           throw error;
         }

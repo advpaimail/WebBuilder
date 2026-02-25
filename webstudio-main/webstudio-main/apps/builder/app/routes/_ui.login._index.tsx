@@ -5,7 +5,10 @@ import {
   json,
 } from "@remix-run/server-runtime";
 import { useLoaderData, type MetaFunction } from "@remix-run/react";
-import { findAuthenticatedUser } from "~/services/auth.server";
+import {
+  findAuthenticatedUser,
+  authenticator,
+} from "~/services/auth.server";
 import env from "~/env/env.server";
 import type { LoginProps } from "~/auth/index.client";
 import { useLoginErrorMessage } from "~/shared/session";
@@ -64,18 +67,43 @@ export const loader = async ({
   // All requests from the builder or canvas app are safeguarded either by preventCrossOriginCookie for fetch requests
   // or by allowedDestinations for iframe requests.
 
-  const user = await findAuthenticatedUser(request);
+  let user = await findAuthenticatedUser(request);
 
   const url = new URL(request.url);
-  let returnTo = url.searchParams.get("returnTo");
+  let returnTo = url.searchParams.get("returnTo") ?? dashboardPath();
+  if (comparePathnames(returnTo, request.url)) {
+    returnTo = dashboardPath();
+  }
+
+  // В dev: автоматический вход по AUTH_SECRET без страницы логина
+  if (
+    !user &&
+    env.DEV_AUTO_LOGIN &&
+    env.DEV_LOGIN === "true" &&
+    env.AUTH_SECRET?.trim()
+  ) {
+    try {
+      const authUrl = new URL("/auth/dev", request.url).toString();
+      const formData = new URLSearchParams({
+        secret: env.AUTH_SECRET.trim(),
+      });
+      const postRequest = new Request(authUrl, {
+        method: "POST",
+        body: formData,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      const authResponse = await authenticator.authenticate("dev", postRequest, {
+        successRedirect: returnTo,
+        throwOnError: true,
+      });
+      return authResponse;
+    } catch (error) {
+      if (error instanceof Response) return error;
+      // при ошибке показываем обычную страницу логина
+    }
+  }
 
   if (user) {
-    returnTo = returnTo ?? dashboardPath();
-    // Avoid loops
-    if (comparePathnames(returnTo, request.url)) {
-      returnTo = dashboardPath();
-    }
-
     throw redirect(returnTo);
   }
 
